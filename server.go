@@ -1,9 +1,12 @@
 package quic
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/tls"
+	b64 "encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -55,6 +58,19 @@ type zeroRTTQueue struct {
 	expiration time.Time
 }
 
+type tokenConn struct {
+	oldToken []byte
+	newToken []byte
+}
+
+type tokenStore struct {
+	tokens []tokenConn
+}
+
+type userStore struct {
+	tokens []tokenConn
+}
+
 // A Listener of QUIC
 type baseServer struct {
 	mutex sync.Mutex
@@ -96,6 +112,7 @@ type baseServer struct {
 		uint64,
 		utils.Logger,
 		protocol.VersionNumber,
+		tokenConn,
 	) quicConn
 
 	serverError             error
@@ -110,7 +127,9 @@ type baseServer struct {
 
 	tracer logging.Tracer
 
-	logger utils.Logger
+	logger     utils.Logger
+	tokenStore *tokenStore
+	userStore  *userStore
 }
 
 // A Listener listens for incoming QUIC connections.
@@ -250,6 +269,8 @@ func newServer(
 		logger:                  utils.DefaultLogger.WithPrefix("server"),
 		acceptEarlyConns:        acceptEarly,
 		onClose:                 onClose,
+		tokenStore:              new(tokenStore),
+		userStore:               new(userStore),
 	}
 	if acceptEarly {
 		s.zeroRTTQueues = map[protocol.ConnectionID]*zeroRTTQueue{}
@@ -277,6 +298,25 @@ func (s *baseServer) run() {
 			}
 		}
 	}
+}
+
+func (s *baseServer) newUser(newToken []byte) []byte {
+	var userId uint16 = 0
+	if len(s.userStore.tokens) > 0 {
+		lastUser := s.userStore.tokens[len(s.userStore.tokens)-1]
+		userId = binary.BigEndian.Uint16(lastUser.oldToken) + 1
+	}
+	newUserId := new(bytes.Buffer)
+	err := binary.Write(newUserId, binary.BigEndian, userId)
+	if err != nil {
+		fmt.Println("binary.Write failed:", err)
+	}
+	s.userStore.tokens = append(s.userStore.tokens, tokenConn{oldToken: newUserId.Bytes(), newToken: newToken})
+	s.logger.Infof("New user registered. User ID: %s First Token: %s",
+		userId,
+		b64.StdEncoding.EncodeToString(newToken),
+	)
+	return newUserId.Bytes()
 }
 
 func (s *baseServer) runSendQueue() {
@@ -568,6 +608,29 @@ func (s *baseServer) handleInitialImpl(p receivedPacket, hdr *wire.Header) error
 	}
 
 	clientAddrIsValid := s.validateToken(token, p.remoteAddr)
+	// TODO
+	newToken, _ := s.tokenGenerator.NewToken(p.remoteAddr)
+	//newTokenDecoded, _ := s.tokenGenerator.DecodeToken(newToken)
+	connected := tokenConn{newToken: newToken}
+	if token == nil {
+		connected.oldToken = s.newUser(newToken)
+	} else {
+		connected.oldToken = hdr.Token
+		s.logger.Infof("Client used a token. New Connection between tokens. Old: %s New: %s",
+			b64.StdEncoding.EncodeToString(connected.oldToken),
+			b64.StdEncoding.EncodeToString(connected.newToken),
+		)
+	}
+	s.tokenStore.tokens = append(s.tokenStore.tokens, connected)
+	s.logger.Infof("Current contents of the store:")
+	for index, item := range s.tokenStore.tokens {
+		s.logger.Infof("Item Index: %i. Connection: Old: %s New: %s",
+			index,
+			b64.StdEncoding.EncodeToString(item.oldToken),
+			b64.StdEncoding.EncodeToString(item.newToken),
+		)
+	}
+
 	if token != nil && !clientAddrIsValid {
 		// For invalid and expired non-retry tokens, we don't send an INVALID_TOKEN error.
 		// We just ignore them, and act as if there was no token on this packet at all.
@@ -649,6 +712,7 @@ func (s *baseServer) handleInitialImpl(p receivedPacket, hdr *wire.Header) error
 			tracingID,
 			s.logger,
 			hdr.Version,
+			connected,
 		)
 		conn.handlePacket(p)
 

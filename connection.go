@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	b64 "encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -207,9 +208,10 @@ type connection struct {
 	connStateMutex sync.Mutex
 	connState      ConnectionState
 
-	logID  string
-	tracer logging.ConnectionTracer
-	logger utils.Logger
+	logID     string
+	tracer    logging.ConnectionTracer
+	logger    utils.Logger
+	tokenConn tokenConn
 }
 
 var (
@@ -236,6 +238,7 @@ var newConnection = func(
 	tracingID uint64,
 	logger utils.Logger,
 	v protocol.VersionNumber,
+	tokenConn tokenConn,
 ) quicConn {
 	s := &connection{
 		conn:                conn,
@@ -248,6 +251,7 @@ var newConnection = func(
 		tracer:              tracer,
 		logger:              logger,
 		version:             v,
+		tokenConn:           tokenConn,
 	}
 	if origDestConnID.Len() > 0 {
 		s.logID = origDestConnID.String()
@@ -748,7 +752,10 @@ func (s *connection) handleHandshakeComplete() error {
 			s.queueControlFrame(s.oneRTTStream.PopCryptoFrame(protocol.MaxPostHandshakeCryptoFrameSize))
 		}
 	}
-	token, err := s.tokenGenerator.NewToken(s.conn.RemoteAddr())
+	// TODO send associated token
+	var token = s.tokenConn.newToken
+
+	s.logger.Infof("Sending new token %s", b64.StdEncoding.EncodeToString(token))
 	if err != nil {
 		return err
 	}
