@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"reflect"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -208,10 +209,14 @@ type connection struct {
 	connStateMutex sync.Mutex
 	connState      ConnectionState
 
-	logID     string
-	tracer    logging.ConnectionTracer
-	logger    utils.Logger
-	tokenConn tokenConn
+	logID           string
+	tracer          logging.ConnectionTracer
+	logger          utils.Logger
+	userIdTokenPair userIdTokenPair
+}
+
+func (s *connection) GetUserIdAndPages() string {
+	return "User ID: " + strconv.Itoa(s.userIdTokenPair.userId) + ". Pages: " + "TBD"
 }
 
 var (
@@ -238,7 +243,7 @@ var newConnection = func(
 	tracingID uint64,
 	logger utils.Logger,
 	v protocol.VersionNumber,
-	tokenConn tokenConn,
+	userIdTokenPair userIdTokenPair,
 ) quicConn {
 	s := &connection{
 		conn:                conn,
@@ -251,7 +256,7 @@ var newConnection = func(
 		tracer:              tracer,
 		logger:              logger,
 		version:             v,
-		tokenConn:           tokenConn,
+		userIdTokenPair:     userIdTokenPair,
 	}
 	if origDestConnID.Len() > 0 {
 		s.logID = origDestConnID.String()
@@ -753,7 +758,7 @@ func (s *connection) handleHandshakeComplete() error {
 		}
 	}
 	// TODO send associated token
-	var token = s.tokenConn.newToken
+	var token = s.userIdTokenPair.token
 
 	s.logger.Infof("Sending new token %s", b64.StdEncoding.EncodeToString(token))
 	if err != nil {

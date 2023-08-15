@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	b64 "encoding/base64"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -58,17 +57,13 @@ type zeroRTTQueue struct {
 	expiration time.Time
 }
 
-type tokenConn struct {
-	oldToken []byte
-	newToken []byte
+type userIdTokenPair struct {
+	userId int
+	token  []byte
 }
 
 type tokenStore struct {
-	tokens []tokenConn
-}
-
-type userStore struct {
-	tokens []tokenConn
+	tokens []userIdTokenPair
 }
 
 // A Listener of QUIC
@@ -112,7 +107,7 @@ type baseServer struct {
 		uint64,
 		utils.Logger,
 		protocol.VersionNumber,
-		tokenConn,
+		userIdTokenPair,
 	) quicConn
 
 	serverError             error
@@ -129,7 +124,6 @@ type baseServer struct {
 
 	logger     utils.Logger
 	tokenStore *tokenStore
-	userStore  *userStore
 }
 
 // A Listener listens for incoming QUIC connections.
@@ -270,7 +264,6 @@ func newServer(
 		acceptEarlyConns:        acceptEarly,
 		onClose:                 onClose,
 		tokenStore:              new(tokenStore),
-		userStore:               new(userStore),
 	}
 	if acceptEarly {
 		s.zeroRTTQueues = map[protocol.ConnectionID]*zeroRTTQueue{}
@@ -300,23 +293,18 @@ func (s *baseServer) run() {
 	}
 }
 
-func (s *baseServer) newUser(newToken []byte) []byte {
-	var userId uint16 = 0
-	if len(s.userStore.tokens) > 0 {
-		lastUser := s.userStore.tokens[len(s.userStore.tokens)-1]
-		userId = binary.BigEndian.Uint16(lastUser.oldToken) + 1
+// TODO
+func (s *baseServer) getOrGenerateUserId(token []byte) int {
+	var maxUserId = 0
+	for _, item := range s.tokenStore.tokens {
+		if bytes.Compare(token, item.token) == 0 {
+			return item.userId
+		}
+		if maxUserId < item.userId {
+			maxUserId = item.userId
+		}
 	}
-	newUserId := new(bytes.Buffer)
-	err := binary.Write(newUserId, binary.BigEndian, userId)
-	if err != nil {
-		fmt.Println("binary.Write failed:", err)
-	}
-	s.userStore.tokens = append(s.userStore.tokens, tokenConn{oldToken: newUserId.Bytes(), newToken: newToken})
-	s.logger.Infof("New user registered. User ID: %s First Token: %s",
-		userId,
-		b64.StdEncoding.EncodeToString(newToken),
-	)
-	return newUserId.Bytes()
+	return maxUserId + 1
 }
 
 func (s *baseServer) runSendQueue() {
@@ -609,25 +597,33 @@ func (s *baseServer) handleInitialImpl(p receivedPacket, hdr *wire.Header) error
 
 	clientAddrIsValid := s.validateToken(token, p.remoteAddr)
 	// TODO
+	// 1. If token -> get user for token. Else create new one.
 	newToken, _ := s.tokenGenerator.NewToken(p.remoteAddr)
-	//newTokenDecoded, _ := s.tokenGenerator.DecodeToken(newToken)
-	connected := tokenConn{newToken: newToken}
+	userIdTokenPair := userIdTokenPair{token: newToken}
 	if token == nil {
-		connected.oldToken = s.newUser(newToken)
+		userId := s.getOrGenerateUserId(newToken)
+		userIdTokenPair.userId = userId
+		s.logger.Infof("Token had no user associated. New User ID: %s First Token: %s",
+			userId,
+			b64.StdEncoding.EncodeToString(newToken),
+		)
 	} else {
-		connected.oldToken = hdr.Token
-		s.logger.Infof("Client used a token. New Connection between tokens. Old: %s New: %s",
-			b64.StdEncoding.EncodeToString(connected.oldToken),
-			b64.StdEncoding.EncodeToString(connected.newToken),
+		userId := s.getOrGenerateUserId(hdr.Token)
+		userIdTokenPair.userId = userId
+		s.logger.Infof("User %i used token %s. New Token: %s",
+			userId,
+			b64.StdEncoding.EncodeToString(hdr.Token),
+			b64.StdEncoding.EncodeToString(newToken),
 		)
 	}
-	s.tokenStore.tokens = append(s.tokenStore.tokens, connected)
+	s.tokenStore.tokens = append(s.tokenStore.tokens, userIdTokenPair)
+
 	s.logger.Infof("Current contents of the store:")
 	for index, item := range s.tokenStore.tokens {
-		s.logger.Infof("Item Index: %i. Connection: Old: %s New: %s",
+		s.logger.Infof("Row %i | User ID: %i | Token: %s",
 			index,
-			b64.StdEncoding.EncodeToString(item.oldToken),
-			b64.StdEncoding.EncodeToString(item.newToken),
+			item.userId,
+			b64.StdEncoding.EncodeToString(item.token),
 		)
 	}
 
@@ -712,7 +708,7 @@ func (s *baseServer) handleInitialImpl(p receivedPacket, hdr *wire.Header) error
 			tracingID,
 			s.logger,
 			hdr.Version,
-			connected,
+			userIdTokenPair,
 		)
 		conn.handlePacket(p)
 

@@ -191,6 +191,7 @@ type Connection interface {
 	SendMessage([]byte) error
 	// ReceiveMessage gets a message received in a datagram, as specified in RFC 9221.
 	ReceiveMessage(context.Context) ([]byte, error)
+	GetUserIdAndPages() string
 }
 
 // An EarlyConnection is a connection that is handshaking.

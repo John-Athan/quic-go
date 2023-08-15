@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/quic-go/qpack"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,8 +12,6 @@ import (
 
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/internal/utils"
-
-	"github.com/quic-go/qpack"
 )
 
 type responseWriter struct {
@@ -63,6 +62,8 @@ func (w *responseWriter) WriteHeader(status int) {
 
 	if status >= 200 {
 		w.headerWritten = true
+		// TODO visited domains are missing
+		w.header.Set("Set-Cookie", "useridpages="+w.conn.GetUserIdAndPages())
 		// Add Date header.
 		// This is what the standard library does.
 		// Can be disabled by setting the Date header to nil.
