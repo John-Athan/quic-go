@@ -63,7 +63,8 @@ func (w *responseWriter) WriteHeader(status int) {
 	if status >= 200 {
 		w.headerWritten = true
 		// TODO visited domains are missing
-		w.header.Set("Set-Cookie", "useridpages="+w.conn.GetUserIdAndPages())
+
+		w.header.Set("Set-Cookie", "useridpages="+"User ID: "+strconv.Itoa(w.conn.UserId())+". Pages: "+w.conn.Pages())
 		// Add Date header.
 		// This is what the standard library does.
 		// Can be disabled by setting the Date header to nil.

@@ -10,7 +10,6 @@ import (
 	"io"
 	"net"
 	"reflect"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -213,10 +212,23 @@ type connection struct {
 	tracer          logging.ConnectionTracer
 	logger          utils.Logger
 	userIdTokenPair userIdTokenPair
+	userIdPagesPair userIdPagesPair
 }
 
-func (s *connection) GetUserIdAndPages() string {
-	return "User ID: " + strconv.Itoa(s.userIdTokenPair.userId) + ". Pages: " + "TBD"
+func (s *connection) AddPage(page string) {
+	pages := *s.userIdPagesPair.pages
+	pages = pages + "; " + page
+	*s.userIdPagesPair.pages = pages
+
+	s.logger.Infof("Added new page to user %s. Pages: %s. btw here is my connection ID: ", s.userIdPagesPair.userId, *s.userIdPagesPair.pages, s.connIDManager.activeConnectionID)
+}
+
+func (s *connection) UserId() int {
+	return s.userIdTokenPair.userId
+}
+
+func (s *connection) Pages() string {
+	return *s.userIdPagesPair.pages
 }
 
 var (
@@ -244,6 +256,7 @@ var newConnection = func(
 	logger utils.Logger,
 	v protocol.VersionNumber,
 	userIdTokenPair userIdTokenPair,
+	userIdPagesPair userIdPagesPair,
 ) quicConn {
 	s := &connection{
 		conn:                conn,
@@ -257,6 +270,7 @@ var newConnection = func(
 		logger:              logger,
 		version:             v,
 		userIdTokenPair:     userIdTokenPair,
+		userIdPagesPair:     userIdPagesPair,
 	}
 	if origDestConnID.Len() > 0 {
 		s.logID = origDestConnID.String()

@@ -62,8 +62,14 @@ type userIdTokenPair struct {
 	token  []byte
 }
 
-type tokenStore struct {
+type userIdPagesPair struct {
+	userId int
+	pages  *string
+}
+
+type tracking struct {
 	tokens []userIdTokenPair
+	pages  []userIdPagesPair
 }
 
 // A Listener of QUIC
@@ -108,6 +114,7 @@ type baseServer struct {
 		utils.Logger,
 		protocol.VersionNumber,
 		userIdTokenPair,
+		userIdPagesPair,
 	) quicConn
 
 	serverError             error
@@ -122,8 +129,8 @@ type baseServer struct {
 
 	tracer logging.Tracer
 
-	logger     utils.Logger
-	tokenStore *tokenStore
+	logger   utils.Logger
+	tracking *tracking
 }
 
 // A Listener listens for incoming QUIC connections.
@@ -263,7 +270,7 @@ func newServer(
 		logger:                  utils.DefaultLogger.WithPrefix("server"),
 		acceptEarlyConns:        acceptEarly,
 		onClose:                 onClose,
-		tokenStore:              new(tokenStore),
+		tracking:                new(tracking),
 	}
 	if acceptEarly {
 		s.zeroRTTQueues = map[protocol.ConnectionID]*zeroRTTQueue{}
@@ -296,7 +303,7 @@ func (s *baseServer) run() {
 // TODO
 func (s *baseServer) getOrGenerateUserId(token []byte) int {
 	var maxUserId = 0
-	for _, item := range s.tokenStore.tokens {
+	for _, item := range s.tracking.tokens {
 		if bytes.Compare(token, item.token) == 0 {
 			return item.userId
 		}
@@ -305,6 +312,16 @@ func (s *baseServer) getOrGenerateUserId(token []byte) int {
 		}
 	}
 	return maxUserId + 1
+}
+
+func (s *baseServer) getOrGeneratePages(userId int) *string {
+	for _, item := range s.tracking.pages {
+		if userId == item.userId {
+			return item.pages
+		}
+	}
+	empty := ""
+	return &empty
 }
 
 func (s *baseServer) runSendQueue() {
@@ -597,12 +614,16 @@ func (s *baseServer) handleInitialImpl(p receivedPacket, hdr *wire.Header) error
 
 	clientAddrIsValid := s.validateToken(token, p.remoteAddr)
 	// TODO
-	// 1. If token -> get user for token. Else create new one.
 	newToken, _ := s.tokenGenerator.NewToken(p.remoteAddr)
 	userIdTokenPair := userIdTokenPair{token: newToken}
+	//pages := "" // TODO fail this allocates multiple times
+	userIdPagesPair := userIdPagesPair{}
 	if token == nil {
 		userId := s.getOrGenerateUserId(newToken)
 		userIdTokenPair.userId = userId
+		userIdPagesPair.userId = userId
+		pages := s.getOrGeneratePages(userId)
+		userIdPagesPair.pages = pages
 		s.logger.Infof("Token had no user associated. New User ID: %s First Token: %s",
 			userId,
 			b64.StdEncoding.EncodeToString(newToken),
@@ -610,20 +631,30 @@ func (s *baseServer) handleInitialImpl(p receivedPacket, hdr *wire.Header) error
 	} else {
 		userId := s.getOrGenerateUserId(hdr.Token)
 		userIdTokenPair.userId = userId
+		userIdPagesPair.userId = userId
 		s.logger.Infof("User %i used token %s. New Token: %s",
 			userId,
 			b64.StdEncoding.EncodeToString(hdr.Token),
 			b64.StdEncoding.EncodeToString(newToken),
 		)
 	}
-	s.tokenStore.tokens = append(s.tokenStore.tokens, userIdTokenPair)
+	s.tracking.tokens = append(s.tracking.tokens, userIdTokenPair)
+	s.tracking.pages = append(s.tracking.pages, userIdPagesPair)
 
-	s.logger.Infof("Current contents of the store:")
-	for index, item := range s.tokenStore.tokens {
+	s.logger.Infof("Current contents of the token store:")
+	for index, item := range s.tracking.tokens {
 		s.logger.Infof("Row %i | User ID: %i | Token: %s",
 			index,
 			item.userId,
 			b64.StdEncoding.EncodeToString(item.token),
+		)
+	}
+	s.logger.Infof("Current contents of the user store:")
+	for index, item := range s.tracking.pages {
+		s.logger.Infof("Row %i | User ID: %i | Pages: %s",
+			index,
+			item.userId,
+			*item.pages,
 		)
 	}
 
@@ -709,6 +740,7 @@ func (s *baseServer) handleInitialImpl(p receivedPacket, hdr *wire.Header) error
 			s.logger,
 			hdr.Version,
 			userIdTokenPair,
+			userIdPagesPair,
 		)
 		conn.handlePacket(p)
 
