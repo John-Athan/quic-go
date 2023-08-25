@@ -301,12 +301,20 @@ func (s *baseServer) run() {
 }
 
 // TODO
-func (s *baseServer) getOrGenerateUserId(token []byte) int {
-	var maxUserId = 0
+// Returns the User ID for a token. Returns 0 if no user is found.
+func (s *baseServer) getUserId(token []byte) int {
 	for _, item := range s.tracking.tokens {
 		if bytes.Compare(token, item.token) == 0 {
 			return item.userId
 		}
+	}
+	return 0
+}
+
+// Returns an unused User ID
+func (s *baseServer) generateUserId() int {
+	var maxUserId = 0
+	for _, item := range s.tracking.tokens {
 		if maxUserId < item.userId {
 			maxUserId = item.userId
 		}
@@ -314,7 +322,8 @@ func (s *baseServer) getOrGenerateUserId(token []byte) int {
 	return maxUserId + 1
 }
 
-func (s *baseServer) getOrGeneratePages(userId int) *string {
+// Returns the pages matching a user ID. Returns an empty string if no user is found.
+func (s *baseServer) getPages(userId int) *string {
 	for _, item := range s.tracking.pages {
 		if userId == item.userId {
 			return item.pages
@@ -616,30 +625,50 @@ func (s *baseServer) handleInitialImpl(p receivedPacket, hdr *wire.Header) error
 	// TODO
 	newToken, _ := s.tokenGenerator.NewToken(p.remoteAddr)
 	userIdTokenPair := userIdTokenPair{token: newToken}
-	//pages := "" // TODO fail this allocates multiple times
 	userIdPagesPair := userIdPagesPair{}
-	if token == nil {
-		userId := s.getOrGenerateUserId(newToken)
+	if token == nil { // user is considered new
+
+		// Generate user and store it alongside its first token
+		userId := s.generateUserId()
 		userIdTokenPair.userId = userId
 		userIdPagesPair.userId = userId
-		pages := s.getOrGeneratePages(userId)
+		s.tracking.tokens = append(s.tracking.tokens, userIdTokenPair)
+
+		// Generate pages entry for new user and store it
+		pages := s.getPages(userId)
 		userIdPagesPair.pages = pages
+		s.tracking.pages = append(s.tracking.pages, userIdPagesPair)
+
 		s.logger.Infof("Token had no user associated. New User ID: %s First Token: %s",
 			userId,
 			b64.StdEncoding.EncodeToString(newToken),
 		)
-	} else {
-		userId := s.getOrGenerateUserId(hdr.Token)
+	} else { // user must exist
+
+		// Get user and store it alongside its new token because the token store is keyed by token.
+		userId := s.getUserId(hdr.Token)
+		if userId == 0 {
+			userId = s.generateUserId()
+			s.logger.Errorf("ERROR: Unknown user used a token. Generating new user with ID %i", userId)
+		}
 		userIdTokenPair.userId = userId
 		userIdPagesPair.userId = userId
+		s.tracking.tokens = append(s.tracking.tokens, userIdTokenPair)
+
+		// Get pages for user. Don't store it because the pages store is keyed by user ID.
+		pages := s.getPages(userId)
+		userIdPagesPair.pages = pages
+		if *pages == "" {
+			s.logger.Errorf("ERROR: No pages found for user. Generating new pages entry for user with ID %i", userId)
+			s.tracking.pages = append(s.tracking.pages, userIdPagesPair)
+		}
+
 		s.logger.Infof("User %i used token %s. New Token: %s",
 			userId,
 			b64.StdEncoding.EncodeToString(hdr.Token),
 			b64.StdEncoding.EncodeToString(newToken),
 		)
 	}
-	s.tracking.tokens = append(s.tracking.tokens, userIdTokenPair)
-	s.tracking.pages = append(s.tracking.pages, userIdPagesPair)
 
 	s.logger.Infof("Current contents of the token store:")
 	for index, item := range s.tracking.tokens {

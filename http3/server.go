@@ -576,6 +576,7 @@ func (s *Server) handleRequest(conn quic.Connection, str quic.Stream, decoder *q
 	req.TLS = &connState
 	req.RemoteAddr = conn.RemoteAddr().String()
 	conn.AddPage(req.Referer())
+	s.logger.Infof("Added referrer %s to pages: %s", req.Referer(), conn.Pages())
 
 	// Check that the client doesn't send more data in DATA frames than indicated by the Content-Length header (if set).
 	// See section 4.1.2 of RFC 9114.

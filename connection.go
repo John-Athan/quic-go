@@ -217,7 +217,7 @@ type connection struct {
 
 func (s *connection) AddPage(page string) {
 	pages := *s.userIdPagesPair.pages
-	pages = pages + "; " + page
+	pages = pages + "-" + page
 	*s.userIdPagesPair.pages = pages
 
 	s.logger.Infof("Added new page to user %s. Pages: %s. btw here is my connection ID: ", s.userIdPagesPair.userId, *s.userIdPagesPair.pages, s.connIDManager.activeConnectionID)
