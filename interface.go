@@ -253,7 +253,8 @@ type Config struct {
 	// If not set, it uses all versions available.
 	Versions []VersionNumber
 	// HandshakeIdleTimeout is the idle timeout before completion of the handshake.
-	// Specifically, if we don't receive any packet from the peer within this time, the connection attempt is aborted.
+	// If we don't receive any packet from the peer within this time, the connection attempt is aborted.
+	// Additionally, if the handshake doesn't complete in twice this time, the connection attempt is also aborted.
 	// If this value is zero, the timeout is set to 5 seconds.
 	HandshakeIdleTimeout time.Duration
 	// MaxIdleTimeout is the maximum duration that may pass without any incoming network activity.
@@ -325,10 +326,6 @@ type Config struct {
 	// Path MTU discovery is only available on systems that allow setting of the Don't Fragment (DF) bit.
 	// If unavailable or disabled, packets will be at most 1252 (IPv4) / 1232 (IPv6) bytes in size.
 	DisablePathMTUDiscovery bool
-	// DisableVersionNegotiationPackets disables the sending of Version Negotiation packets.
-	// This can be useful if version information is exchanged out-of-band.
-	// It has no effect for a client.
-	DisableVersionNegotiationPackets bool
 	// Allow0RTT allows the application to decide if a 0-RTT connection attempt should be accepted.
 	// Only valid for the server.
 	Allow0RTT bool

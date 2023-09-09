@@ -20,9 +20,9 @@ import (
 	"github.com/quic-go/quic-go/internal/wire"
 	"github.com/quic-go/quic-go/logging"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 )
 
 var _ = Describe("Server", func() {
@@ -357,7 +357,7 @@ var _ = Describe("Server", func() {
 			})
 
 			It("doesn't send a Version Negotiation packets if sending them is disabled", func() {
-				serv.config.DisableVersionNegotiationPackets = true
+				serv.disableVersionNegotiation = true
 				srcConnID := protocol.ParseConnectionID([]byte{1, 2, 3, 4, 5})
 				destConnID := protocol.ParseConnectionID([]byte{1, 2, 3, 4, 5, 6})
 				packet := getPacket(&wire.Header{

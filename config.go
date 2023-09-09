@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/quic-go/quic-go/internal/protocol"
-	"github.com/quic-go/quic-go/internal/utils"
 	"github.com/quic-go/quic-go/quicvarint"
 )
 
@@ -17,7 +16,7 @@ func (c *Config) Clone() *Config {
 }
 
 func (c *Config) handshakeTimeout() time.Duration {
-	return utils.Max(protocol.DefaultHandshakeTimeout, 2*c.HandshakeIdleTimeout)
+	return 2 * c.HandshakeIdleTimeout
 }
 
 func validateConfig(config *Config) error {
@@ -110,26 +109,25 @@ func populateConfig(config *Config) *Config {
 	}
 
 	return &Config{
-		GetConfigForClient:               config.GetConfigForClient,
-		Versions:                         versions,
-		HandshakeIdleTimeout:             handshakeIdleTimeout,
-		MaxIdleTimeout:                   idleTimeout,
-		MaxTokenAge:                      config.MaxTokenAge,
-		MaxRetryTokenAge:                 config.MaxRetryTokenAge,
-		RequireAddressValidation:         config.RequireAddressValidation,
-		KeepAlivePeriod:                  config.KeepAlivePeriod,
-		InitialStreamReceiveWindow:       initialStreamReceiveWindow,
-		MaxStreamReceiveWindow:           maxStreamReceiveWindow,
-		InitialConnectionReceiveWindow:   initialConnectionReceiveWindow,
-		MaxConnectionReceiveWindow:       maxConnectionReceiveWindow,
-		AllowConnectionWindowIncrease:    config.AllowConnectionWindowIncrease,
-		MaxIncomingStreams:               maxIncomingStreams,
-		MaxIncomingUniStreams:            maxIncomingUniStreams,
-		TokenStore:                       config.TokenStore,
-		EnableDatagrams:                  config.EnableDatagrams,
-		DisablePathMTUDiscovery:          config.DisablePathMTUDiscovery,
-		DisableVersionNegotiationPackets: config.DisableVersionNegotiationPackets,
-		Allow0RTT:                        config.Allow0RTT,
-		Tracer:                           config.Tracer,
+		GetConfigForClient:             config.GetConfigForClient,
+		Versions:                       versions,
+		HandshakeIdleTimeout:           handshakeIdleTimeout,
+		MaxIdleTimeout:                 idleTimeout,
+		MaxTokenAge:                    config.MaxTokenAge,
+		MaxRetryTokenAge:               config.MaxRetryTokenAge,
+		RequireAddressValidation:       config.RequireAddressValidation,
+		KeepAlivePeriod:                config.KeepAlivePeriod,
+		InitialStreamReceiveWindow:     initialStreamReceiveWindow,
+		MaxStreamReceiveWindow:         maxStreamReceiveWindow,
+		InitialConnectionReceiveWindow: initialConnectionReceiveWindow,
+		MaxConnectionReceiveWindow:     maxConnectionReceiveWindow,
+		AllowConnectionWindowIncrease:  config.AllowConnectionWindowIncrease,
+		MaxIncomingStreams:             maxIncomingStreams,
+		MaxIncomingUniStreams:          maxIncomingUniStreams,
+		TokenStore:                     config.TokenStore,
+		EnableDatagrams:                config.EnableDatagrams,
+		DisablePathMTUDiscovery:        config.DisablePathMTUDiscovery,
+		Allow0RTT:                      config.Allow0RTT,
+		Tracer:                         config.Tracer,
 	}
 }

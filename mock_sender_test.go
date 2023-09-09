@@ -7,8 +7,7 @@ package quic
 import (
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
-	protocol "github.com/quic-go/quic-go/internal/protocol"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockSender is a mock of Sender interface.
@@ -75,7 +74,7 @@ func (mr *MockSenderMockRecorder) Run() *gomock.Call {
 }
 
 // Send mocks base method.
-func (m *MockSender) Send(arg0 *packetBuffer, arg1 protocol.ByteCount) {
+func (m *MockSender) Send(arg0 *packetBuffer, arg1 uint16) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Send", arg0, arg1)
 }

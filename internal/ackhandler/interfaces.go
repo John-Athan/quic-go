@@ -13,10 +13,10 @@ type SentPacketHandler interface {
 	SentPacket(t time.Time, pn, largestAcked protocol.PacketNumber, streamFrames []StreamFrame, frames []Frame, encLevel protocol.EncryptionLevel, size protocol.ByteCount, isPathMTUProbePacket bool)
 	// ReceivedAck processes an ACK frame.
 	// It does not store a copy of the frame.
-	ReceivedAck(f *wire.AckFrame, encLevel protocol.EncryptionLevel, recvTime time.Time) (bool /* 1-RTT packet acked */, error)
+	ReceivedAck(f *wire.AckFrame, encLevel protocol.EncryptionLevel, rcvTime time.Time) (bool /* 1-RTT packet acked */, error)
 	ReceivedBytes(protocol.ByteCount)
 	DropPackets(protocol.EncryptionLevel)
-	ResetForRetry() error
+	ResetForRetry(rcvTime time.Time) error
 	SetHandshakeConfirmed()
 
 	// The SendMode determines if and what kind of packets can be sent.
@@ -44,7 +44,7 @@ type sentPacketTracker interface {
 // ReceivedPacketHandler handles ACKs needed to send for incoming packets
 type ReceivedPacketHandler interface {
 	IsPotentiallyDuplicate(protocol.PacketNumber, protocol.EncryptionLevel) bool
-	ReceivedPacket(pn protocol.PacketNumber, ecn protocol.ECN, encLevel protocol.EncryptionLevel, rcvTime time.Time, shouldInstigateAck bool) error
+	ReceivedPacket(pn protocol.PacketNumber, ecn protocol.ECN, encLevel protocol.EncryptionLevel, rcvTime time.Time, ackEliciting bool) error
 	DropPackets(protocol.EncryptionLevel)
 
 	GetAlarmTimeout() time.Time

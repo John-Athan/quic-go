@@ -1,7 +1,6 @@
 package quic
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -105,9 +104,9 @@ func (c *basicConn) ReadPacket() (receivedPacket, error) {
 	}, nil
 }
 
-func (c *basicConn) WritePacket(b []byte, packetSize uint16, addr net.Addr, _ []byte) (n int, err error) {
-	if uint16(len(b)) != packetSize {
-		panic(fmt.Sprintf("inconsistent length. got: %d. expected %d", packetSize, len(b)))
+func (c *basicConn) WritePacket(b []byte, addr net.Addr, _ []byte, gsoSize uint16) (n int, err error) {
+	if gsoSize != 0 {
+		panic("cannot use GSO with a basicConn")
 	}
 	return c.PacketConn.WriteTo(b, addr)
 }

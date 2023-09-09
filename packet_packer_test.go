@@ -2,6 +2,7 @@ package quic
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -17,10 +18,9 @@ import (
 	"github.com/quic-go/quic-go/internal/utils"
 	"github.com/quic-go/quic-go/internal/wire"
 
-	"github.com/golang/mock/gomock"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 )
 
 var _ = Describe("Packet packer", func() {
@@ -334,7 +334,7 @@ var _ = Describe("Packet packer", func() {
 				sealingManager.EXPECT().GetInitialSealer().Return(nil, handshake.ErrKeysDropped)
 				sealingManager.EXPECT().GetHandshakeSealer().Return(getSealer(), nil)
 				sealingManager.EXPECT().Get1RTTSealer().Return(nil, handshake.ErrKeysNotYetAvailable)
-				quicErr := qerr.NewLocalCryptoError(0x42, "crypto error")
+				quicErr := qerr.NewLocalCryptoError(0x42, errors.New("crypto error"))
 				quicErr.FrameType = 0x1234
 				p, err := packer.PackConnectionClose(quicErr, maxPacketSize, protocol.Version1)
 				Expect(err).ToNot(HaveOccurred())
