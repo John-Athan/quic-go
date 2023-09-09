@@ -462,7 +462,9 @@ var newClientConnection = func(
 		s.tokenStoreKey = conn.RemoteAddr().String()
 	}
 	if s.config.TokenStore != nil {
+		s.logger.Infof("Token store content before popping: %s", s.config.TokenStore)
 		if token := s.config.TokenStore.Pop(s.tokenStoreKey); token != nil {
+			s.logger.Infof("Gonna use token %s for %s now.", token.data, s.tokenStoreKey)
 			s.packer.SetToken(token.data)
 		}
 	}
@@ -1495,8 +1497,11 @@ func (s *connection) handleNewTokenFrame(frame *wire.NewTokenFrame) error {
 			ErrorMessage: "received NEW_TOKEN frame from the client",
 		}
 	}
+	s.logger.Infof("Received new token for connection %s", s.connIDManager.activeConnectionID)
 	if s.config.TokenStore != nil {
+		s.logger.Infof("Gonna store token %s now.", frame.Token)
 		s.config.TokenStore.Put(s.tokenStoreKey, &ClientToken{data: frame.Token})
+		s.logger.Infof("Token Store content: %s", s.config.TokenStore)
 	}
 	return nil
 }

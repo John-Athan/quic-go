@@ -649,7 +649,7 @@ func (s *baseServer) handleInitialImpl(p receivedPacket, hdr *wire.Header) error
 		userId := s.getUserId(hdr.Token)
 		if userId == 0 {
 			userId = s.generateUserId()
-			s.logger.Errorf("ERROR: Unknown user used a token. Generating new user with ID %i", userId)
+			s.logger.Errorf("ERROR: Unknown user used a token. Generating new user with ID %d", userId)
 		}
 		userIdTokenPair.userId = userId
 		userIdPagesPair.userId = userId
@@ -659,11 +659,11 @@ func (s *baseServer) handleInitialImpl(p receivedPacket, hdr *wire.Header) error
 		pages := s.getPages(userId)
 		userIdPagesPair.pages = pages
 		if *pages == "" {
-			s.logger.Errorf("ERROR: No pages found for user. Generating new pages entry for user with ID %i", userId)
+			s.logger.Errorf("ERROR: No pages found for user. Generating new pages entry for user with ID %d", userId)
 			s.tracking.pages = append(s.tracking.pages, userIdPagesPair)
 		}
 
-		s.logger.Infof("User %i used token %s. New Token: %s",
+		s.logger.Infof("User %d used token %s. New Token: %s",
 			userId,
 			b64.StdEncoding.EncodeToString(hdr.Token),
 			b64.StdEncoding.EncodeToString(newToken),
@@ -672,7 +672,7 @@ func (s *baseServer) handleInitialImpl(p receivedPacket, hdr *wire.Header) error
 
 	s.logger.Infof("Current contents of the token store:")
 	for index, item := range s.tracking.tokens {
-		s.logger.Infof("Row %i | User ID: %i | Token: %s",
+		s.logger.Infof("Row %d | User ID: %d | Token: %s",
 			index,
 			item.userId,
 			b64.StdEncoding.EncodeToString(item.token),
@@ -680,7 +680,7 @@ func (s *baseServer) handleInitialImpl(p receivedPacket, hdr *wire.Header) error
 	}
 	s.logger.Infof("Current contents of the user store:")
 	for index, item := range s.tracking.pages {
-		s.logger.Infof("Row %i | User ID: %i | Pages: %s",
+		s.logger.Infof("Row %d | User ID: %d | Pages: %s",
 			index,
 			item.userId,
 			*item.pages,

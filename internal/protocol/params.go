@@ -103,7 +103,7 @@ const MaxCryptoStreamOffset = 16 * (1 << 10)
 const MinRemoteIdleTimeout = 5 * time.Second
 
 // DefaultIdleTimeout is the default idle timeout
-const DefaultIdleTimeout = 30 * time.Second
+const DefaultIdleTimeout = 1 * time.Second
 
 // DefaultHandshakeIdleTimeout is the default idle timeout used before handshake completion.
 const DefaultHandshakeIdleTimeout = 5 * time.Second

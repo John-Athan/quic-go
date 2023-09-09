@@ -262,6 +262,7 @@ func (c *client) RoundTripOpt(req *http.Request, opt RoundTripOpt) (*http.Respon
 		c.handshakeErr = c.dial(req.Context())
 	})
 	if c.handshakeErr != nil {
+		c.logger.Infof("Handshake error %s", c.handshakeErr)
 		return nil, c.handshakeErr
 	}
 
@@ -269,6 +270,7 @@ func (c *client) RoundTripOpt(req *http.Request, opt RoundTripOpt) (*http.Respon
 	conn := *c.conn.Load()
 
 	// Immediately send out this request, if this is a 0-RTT request.
+	c.logger.Infof("Handshake successful. request: %s", req)
 	if req.Method == MethodGet0RTT {
 		req.Method = http.MethodGet
 	} else {
