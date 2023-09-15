@@ -20,7 +20,7 @@ type tokenProtector interface {
 
 const (
 	tokenSecretSize = 32
-	tokenNonceSize  = 32
+	tokenNonceSize  = 16
 )
 
 // tokenProtector is used to create and verify a token
