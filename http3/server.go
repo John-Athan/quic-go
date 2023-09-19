@@ -30,8 +30,6 @@ var (
 const (
 	// NextProtoH3Draft29 is the ALPN protocol negotiated during the TLS handshake, for QUIC draft 29.
 	NextProtoH3Draft29 = "h3-29"
-	// NextProtoH3 is the ALPN protocol negotiated during the TLS handshake, for QUIC v1 and v2.
-	NextProtoH3 = "h3"
 )
 
 // StreamType is the stream type of a unidirectional stream.
