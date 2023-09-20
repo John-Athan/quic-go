@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -47,6 +48,7 @@ const (
 	retrySourceConnectionIDParameterID         transportParameterID = 0x10
 	// RFC 9221
 	maxDatagramFrameSizeParameterID transportParameterID = 0x20
+	googleQuicVersion               transportParameterID = 0x4752
 )
 
 // PreferredAddress is the value encoding in the preferred_address transport parameter
@@ -87,6 +89,17 @@ type TransportParameters struct {
 	StatelessResetToken     *protocol.StatelessResetToken
 	ActiveConnectionIDLimit uint64
 
+	GoogleQuicVersion [16]byte
+	/*
+			Parameter: google_quic_version (len=13)
+		    Type: google_quic_version (0x4752)
+		    Length: 13
+		    Value: 000000010800000001ff00001d
+		    Google QUIC version: 1 (0x00000001)
+		    Google Supported Versions Length: 8
+		    Google Supported Version: 1 (0x00000001)
+		    Google Supported Version: draft-29 (0xff00001d)
+	*/
 	MaxDatagramFrameSize protocol.ByteCount
 }
 
@@ -370,6 +383,13 @@ func (p *TransportParameters) Marshal(pers protocol.Perspective) []byte {
 		b = quicvarint.Append(b, 0)
 	}
 	if pers == protocol.PerspectiveServer {
+
+		// TODO custom parameter: google quic version
+		b = quicvarint.Append(b, uint64(googleQuicVersion))
+		b = quicvarint.Append(b, 13)
+		s, _ := hex.DecodeString("000000010800000001ff00001d")
+		b = append(b, s...) // 000000010800000001ff00001d
+
 		// stateless_reset_token
 		if p.StatelessResetToken != nil {
 			b = quicvarint.Append(b, uint64(statelessResetTokenParameterID))
