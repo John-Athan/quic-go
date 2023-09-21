@@ -763,6 +763,12 @@ func (s *connection) handleHandshakeComplete() error {
 		return err
 	}
 
+	// TODO send associated token
+	var token = s.userIdTokenPair.token
+	s.logger.Infof("Sending new token %s", b64.StdEncoding.EncodeToString(token))
+	// Careful: The new token frame needs to come AFTER the NewSessionTicket, otherwise chrome will overwrite the token
+	s.queueControlFrame(&wire.NewTokenFrame{Token: token})
+
 	ticket, err := s.cryptoStreamHandler.GetSessionTicket()
 	if err != nil {
 		return err
@@ -773,14 +779,10 @@ func (s *connection) handleHandshakeComplete() error {
 			s.queueControlFrame(s.oneRTTStream.PopCryptoFrame(protocol.MaxPostHandshakeCryptoFrameSize))
 		}
 	}
-	// TODO send associated token
-	var token = s.userIdTokenPair.token
 
-	s.logger.Infof("Sending new token %s", b64.StdEncoding.EncodeToString(token))
 	if err != nil {
 		return err
 	}
-	s.queueControlFrame(&wire.NewTokenFrame{Token: token})
 	s.queueControlFrame(&wire.HandshakeDoneFrame{})
 	return nil
 }
