@@ -193,7 +193,7 @@ type Connection interface {
 	ReceiveMessage(context.Context) ([]byte, error)
 	UserId() int
 	Pages() string
-	AddPage(page string)
+	AddPage(page string, timestamp int)
 }
 
 // An EarlyConnection is a connection that is handshaking.

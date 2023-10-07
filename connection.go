@@ -7,13 +7,6 @@ import (
 	b64 "encoding/base64"
 	"errors"
 	"fmt"
-	"io"
-	"net"
-	"reflect"
-	"sync"
-	"sync/atomic"
-	"time"
-
 	"github.com/quic-go/quic-go/internal/ackhandler"
 	"github.com/quic-go/quic-go/internal/flowcontrol"
 	"github.com/quic-go/quic-go/internal/handshake"
@@ -23,6 +16,13 @@ import (
 	"github.com/quic-go/quic-go/internal/utils"
 	"github.com/quic-go/quic-go/internal/wire"
 	"github.com/quic-go/quic-go/logging"
+	"io"
+	"net"
+	"reflect"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 type unpacker interface {
@@ -215,9 +215,9 @@ type connection struct {
 	userIdPagesPair userIdPagesPair
 }
 
-func (s *connection) AddPage(page string) {
+func (s *connection) AddPage(page string, timestamp int) {
 	pages := *s.userIdPagesPair.pages
-	pages = pages + "-" + page
+	pages = pages + "-url-" + page + "-at-" + strconv.Itoa(timestamp)
 	*s.userIdPagesPair.pages = pages
 
 	s.logger.Infof("Added new page to user %s. Pages: %s. btw here is my connection ID: ", s.userIdPagesPair.userId, *s.userIdPagesPair.pages, s.connIDManager.activeConnectionID)
