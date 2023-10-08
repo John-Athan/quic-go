@@ -192,6 +192,8 @@ type Connection interface {
 	// ReceiveMessage gets a message received in a datagram, as specified in RFC 9221.
 	ReceiveMessage(context.Context) ([]byte, error)
 	UserId() int
+	Cookie() string
+	SetCookie(newCookie string)
 	Pages() string
 	AddPage(page string, timestamp int)
 }

@@ -213,6 +213,7 @@ type connection struct {
 	logger          utils.Logger
 	userIdTokenPair userIdTokenPair
 	userIdPagesPair userIdPagesPair
+	cookie          string
 }
 
 func (s *connection) AddPage(page string, timestamp int) {
@@ -225,6 +226,14 @@ func (s *connection) AddPage(page string, timestamp int) {
 
 func (s *connection) UserId() int {
 	return s.userIdTokenPair.userId
+}
+
+func (s *connection) Cookie() string {
+	return s.cookie
+}
+
+func (s *connection) SetCookie(newCookie string) {
+	s.cookie = newCookie
 }
 
 func (s *connection) Pages() string {

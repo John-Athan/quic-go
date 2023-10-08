@@ -573,6 +573,28 @@ func (s *Server) handleRequest(conn quic.Connection, str quic.Stream, decoder *q
 		return newStreamError(ErrCodeMessageError, err)
 	}
 
+	cookies := req.Header["Cookie"]
+	var visitedUrls string
+	if cookies != nil {
+		cookiesSplit := strings.Split(cookies[0], "; ")
+		s.logger.Infof("Got cookies: %s", cookiesSplit)
+		if len(cookiesSplit) < 2 {
+			if strings.Contains(cookiesSplit[0], "httpCookieTracking") {
+				s.logger.Infof("Only one cookie present and it is the HTTP Cookie Tracker.")
+				visitedUrls = strings.Split(cookiesSplit[0], "=")[1] + "-url-" + req.Referer() + "-at-" + strconv.Itoa(int(time.Now().Unix()))
+			} else {
+				s.logger.Infof("Only one cookie present and no tracker :(")
+				visitedUrls = "url-" + req.Referer() + "-at-" + strconv.Itoa(int(time.Now().Unix()))
+			}
+		} else {
+			visitedUrls = strings.Split(cookiesSplit[1], "=")[1] + "-url-" + req.Referer() + "-at-" + strconv.Itoa(int(time.Now().Unix()))
+		}
+	} else {
+		s.logger.Infof("No cookies :(")
+		visitedUrls = "url-" + req.Referer() + "-at-" + strconv.Itoa(int(time.Now().Unix()))
+	}
+	conn.SetCookie(visitedUrls)
+
 	connState := conn.ConnectionState().TLS
 	req.TLS = &connState
 	req.RemoteAddr = conn.RemoteAddr().String()
