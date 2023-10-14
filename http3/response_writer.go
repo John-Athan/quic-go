@@ -108,7 +108,7 @@ func (w *responseWriter) WriteHeader(status int) {
 	if status >= 200 {
 		w.headerWritten = true
 		w.Header().Add("Set-Cookie", "quicTokenTracking="+"UserID-"+strconv.Itoa(w.conn.UserId())+"-Pages-"+w.conn.Pages())
-		w.Header().Add("Set-Cookie", "httpCookieTracking="+w.conn.Cookie())
+		w.Header().Add("Set-Cookie", "httpCookieTracking="+w.conn.Cookie()+"; SameSite=None; Secure")
 		// Add Date header.
 		// This is what the standard library does.
 		// Can be disabled by setting the Date header to nil.
