@@ -115,3 +115,12 @@ func (s *lruTokenStore) Pop(key string) *ClientToken {
 	}
 	return token
 }
+
+func (s *lruTokenStore) Exists(key string) bool {
+	for k, v := range s.m {
+		if k == key && len(v.Value.cache.tokens) > 0 {
+			return true
+		}
+	}
+	return false
+}
