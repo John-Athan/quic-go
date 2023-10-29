@@ -471,10 +471,13 @@ var newClientConnection = func(
 		s.tokenStoreKey = conn.RemoteAddr().String()
 	}
 	if s.config.TokenStore != nil {
-		s.logger.Infof("Token store content before popping: %s", s.config.TokenStore)
+		s.logger.Infof("Going to look in the store for the following domain: %s", s.tokenStoreKey)
+		s.logger.Infof(s.config.TokenStore.Describe())
 		if token := s.config.TokenStore.Pop(s.tokenStoreKey); token != nil {
-			s.logger.Infof("Gonna use token %s for %s now.", token.data, s.tokenStoreKey)
+			s.logger.Infof("Gonna use token %s for %s now.", b64.StdEncoding.EncodeToString(token.data), s.tokenStoreKey)
 			s.packer.SetToken(token.data)
+		} else {
+			s.logger.Infof("Token for %s not found.", s.tokenStoreKey)
 		}
 	}
 	return s
@@ -1510,9 +1513,9 @@ func (s *connection) handleNewTokenFrame(frame *wire.NewTokenFrame) error {
 	}
 	s.logger.Infof("Received new token for connection %s", s.connIDManager.activeConnectionID)
 	if s.config.TokenStore != nil {
-		s.logger.Infof("Gonna store token %s now.", frame.Token)
+		s.logger.Infof("Gonna store token %s now.", b64.StdEncoding.EncodeToString(frame.Token))
 		s.config.TokenStore.Put(s.tokenStoreKey, &ClientToken{data: frame.Token})
-		s.logger.Infof("Token Store content: %s", s.config.TokenStore)
+		s.logger.Infof(s.config.TokenStore.Describe())
 	}
 	return nil
 }

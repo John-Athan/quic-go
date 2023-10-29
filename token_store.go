@@ -1,6 +1,8 @@
 package quic
 
 import (
+	b64 "encoding/base64"
+	"fmt"
 	"sync"
 
 	"github.com/quic-go/quic-go/internal/utils"
@@ -18,16 +20,19 @@ func newSingleOriginTokenStore(size int) *singleOriginTokenStore {
 }
 
 func (s *singleOriginTokenStore) Add(token *ClientToken) {
-	s.tokens[s.p] = token
-	s.p = s.index(s.p + 1)
-	s.len = utils.Min(s.len+1, len(s.tokens))
+	if s.len == 0 {
+		s.tokens[s.p] = token
+		s.p = s.index(s.p + 1)
+		s.len = utils.Min(s.len+1, len(s.tokens))
+	}
 }
 
 func (s *singleOriginTokenStore) Pop() *ClientToken {
-	s.p = s.index(s.p - 1)
+	// Right now, we don't want to actually pop the token, just retrieve it
+	//s.p = s.index(s.p - 1)
 	token := s.tokens[s.p]
-	s.tokens[s.p] = nil
-	s.len = utils.Max(s.len-1, 0)
+	//s.tokens[s.p] = nil
+	//s.len = utils.Max(s.len-1, 0)
 	return token
 }
 
@@ -41,8 +46,9 @@ func (s *singleOriginTokenStore) index(i int) int {
 }
 
 type lruTokenStoreEntry struct {
-	key   string
-	cache *singleOriginTokenStore
+	key         string
+	cache       *singleOriginTokenStore
+	hasBeenUsed bool
 }
 
 type lruTokenStore struct {
@@ -81,8 +87,9 @@ func (s *lruTokenStore) Put(key string, token *ClientToken) {
 
 	if s.q.Len() < s.capacity {
 		entry := &lruTokenStoreEntry{
-			key:   key,
-			cache: newSingleOriginTokenStore(s.singleOriginSize),
+			key:         key,
+			cache:       newSingleOriginTokenStore(s.singleOriginSize),
+			hasBeenUsed: false,
 		}
 		entry.cache.Add(token)
 		s.m[key] = s.q.PushFront(entry)
@@ -107,6 +114,7 @@ func (s *lruTokenStore) Pop(key string) *ClientToken {
 	if el, ok := s.m[key]; ok {
 		s.q.MoveToFront(el)
 		cache := el.Value.cache
+		s.m[key].Value.hasBeenUsed = true
 		token = cache.Pop()
 		if cache.Len() == 0 {
 			s.q.Remove(el)
@@ -123,4 +131,31 @@ func (s *lruTokenStore) Exists(key string) bool {
 		}
 	}
 	return false
+}
+
+func (s *lruTokenStore) Size(key string) int {
+	for k, v := range s.m {
+		if k == key && len(v.Value.cache.tokens) > 0 {
+			return len(v.Value.cache.tokens[0].data)
+		}
+	}
+	return 0
+}
+
+func (s *lruTokenStore) HasBeenUsed(key string) bool {
+	for k, v := range s.m {
+		if k == key && v.Value.hasBeenUsed {
+			v.Value.hasBeenUsed = false
+			return true
+		}
+	}
+	return false
+}
+
+func (s *lruTokenStore) Describe() string {
+	ret := "The token store contains the following items:\n"
+	for k, v := range s.m {
+		ret = ret + fmt.Sprintf("Domain: %s Used: %t Token: %s\n", k, v.Value.hasBeenUsed, b64.StdEncoding.EncodeToString(v.Value.cache.tokens[0].data))
+	}
+	return ret
 }

@@ -41,7 +41,10 @@ type TokenStore interface {
 	// Put adds a token to the cache with the given key. It might get called
 	// multiple times in a connection.
 	Put(key string, token *ClientToken)
+	Describe() string
 	Exists(key string) bool
+	HasBeenUsed(key string) bool
+	Size(key string) int
 }
 
 // Err0RTTRejected is the returned from:

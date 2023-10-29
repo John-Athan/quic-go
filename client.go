@@ -188,7 +188,7 @@ func newClient(sendConn sendConn, connIDGenerator ConnectionIDGenerator, config 
 }
 
 func (c *client) dial(ctx context.Context) error {
-	c.logger.Infof("Starting new connection to %s (%s -> %s), source connection ID %s, destination connection ID %s, version %s", c.tlsConf.ServerName, c.sendConn.LocalAddr(), c.sendConn.RemoteAddr(), c.srcConnID, c.destConnID, c.version)
+	c.logger.Infof("Dialing (possibly 0-RTT) to %s (%s -> %s)", c.tlsConf.ServerName, c.sendConn.LocalAddr(), c.sendConn.RemoteAddr())
 
 	c.conn = newClientConnection(
 		c.sendConn,
@@ -230,21 +230,27 @@ func (c *client) dial(ctx context.Context) error {
 		earlyConnChan = c.conn.earlyConnReady()
 	}
 
+	c.logger.Infof("Selecting what to do next for %s", c.tlsConf.ServerName)
 	select {
 	case <-ctx.Done():
+		c.logger.Infof("Shutting down connection to %s", c.tlsConf.ServerName)
 		c.conn.shutdown()
 		return ctx.Err()
 	case err := <-errorChan:
+		c.logger.Infof("Error with connection to %s", c.tlsConf.ServerName)
 		return err
 	case recreateErr := <-recreateChan:
+		c.logger.Infof("Recreating channel for connection to %s", c.tlsConf.ServerName)
 		c.initialPacketNumber = recreateErr.nextPacketNumber
 		c.version = recreateErr.nextVersion
 		c.hasNegotiatedVersion = true
 		return c.dial(ctx)
 	case <-earlyConnChan:
+		c.logger.Infof("Early connection to %s established", c.tlsConf.ServerName)
 		// ready to send 0-RTT data
 		return nil
 	case <-c.conn.HandshakeComplete():
+		c.logger.Infof("Full handshake to %s established", c.tlsConf.ServerName)
 		// handshake successfully completed
 		return nil
 	}
