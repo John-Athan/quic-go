@@ -125,6 +125,8 @@ func (s *lruTokenStore) Pop(key string) *ClientToken {
 }
 
 func (s *lruTokenStore) Exists(key string) bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	for k, v := range s.m {
 		if k == key && len(v.Value.cache.tokens) > 0 {
 			return true
@@ -134,6 +136,8 @@ func (s *lruTokenStore) Exists(key string) bool {
 }
 
 func (s *lruTokenStore) Size(key string) int {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	for k, v := range s.m {
 		if k == key && len(v.Value.cache.tokens) > 0 {
 			return len(v.Value.cache.tokens[0].data)
@@ -143,6 +147,8 @@ func (s *lruTokenStore) Size(key string) int {
 }
 
 func (s *lruTokenStore) HasBeenUsed(key string) bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	for k, v := range s.m {
 		if k == key && v.Value.hasBeenUsed {
 			v.Value.hasBeenUsed = false
@@ -153,6 +159,8 @@ func (s *lruTokenStore) HasBeenUsed(key string) bool {
 }
 
 func (s *lruTokenStore) Describe() string {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	ret := "The token store contains the following items:\n"
 	for k, v := range s.m {
 		ret = ret + fmt.Sprintf("Domain: %s Used: %t Token: %s\n", k, v.Value.hasBeenUsed, b64.StdEncoding.EncodeToString(v.Value.cache.tokens[0].data))
