@@ -74,6 +74,14 @@ func NewLRUTokenStore(maxOrigins, tokensPerOrigin int) TokenStore {
 	}
 }
 
+func (s *lruTokenStore) PutString(key string, tokenString string) {
+	tokenDecoded, _ := b64.StdEncoding.DecodeString(tokenString)
+	token2 := &ClientToken{
+		data: tokenDecoded,
+	}
+	s.Put(key, token2)
+}
+
 func (s *lruTokenStore) Put(key string, token *ClientToken) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -124,15 +132,15 @@ func (s *lruTokenStore) Pop(key string) *ClientToken {
 	return token
 }
 
-func (s *lruTokenStore) Exists(key string) bool {
+func (s *lruTokenStore) GetToken(key string) string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for k, v := range s.m {
 		if k == key && len(v.Value.cache.tokens) > 0 {
-			return true
+			return b64.StdEncoding.EncodeToString(v.Value.cache.tokens[0].data)
 		}
 	}
-	return false
+	return ""
 }
 
 func (s *lruTokenStore) Size(key string) int {

@@ -41,8 +41,9 @@ type TokenStore interface {
 	// Put adds a token to the cache with the given key. It might get called
 	// multiple times in a connection.
 	Put(key string, token *ClientToken)
+	PutString(key string, token string)
 	Describe() string
-	Exists(key string) bool
+	GetToken(key string) string
 	HasBeenUsed(key string) bool
 	Size(key string) int
 }
