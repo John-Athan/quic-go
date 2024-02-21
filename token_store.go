@@ -73,12 +73,11 @@ func NewLRUTokenStore(maxOrigins, tokensPerOrigin int) TokenStore {
 	}
 }
 
-func (s *lruTokenStore) PutString(key string, tokenString string) {
-	tokenDecoded, _ := b64.StdEncoding.DecodeString(tokenString)
-	token2 := &ClientToken{
-		data: tokenDecoded,
+func (s *lruTokenStore) PutString(key string, tokenString []byte) {
+	token := &ClientToken{
+		data: tokenString,
 	}
-	s.Put(key, token2)
+	s.Put(key, token)
 }
 
 func (s *lruTokenStore) Put(key string, token *ClientToken) {
