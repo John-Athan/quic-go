@@ -28,11 +28,10 @@ func (s *singleOriginTokenStore) Add(token *ClientToken) {
 }
 
 func (s *singleOriginTokenStore) Pop() *ClientToken {
-	// Right now, we don't want to actually pop the token, just retrieve it
-	//s.p = s.index(s.p - 1)
+	s.p = s.index(s.p - 1)
 	token := s.tokens[s.p]
-	//s.tokens[s.p] = nil
-	//s.len = utils.Max(s.len-1, 0)
+	s.tokens[s.p] = nil
+	s.len = utils.Max(s.len-1, 0)
 	return token
 }
 
