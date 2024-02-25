@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/quic-go/quic-go/internal/utils"
 	list "github.com/quic-go/quic-go/internal/utils/linkedlist"
 )
 
@@ -20,18 +19,19 @@ func newSingleOriginTokenStore(size int) *singleOriginTokenStore {
 }
 
 func (s *singleOriginTokenStore) Add(token *ClientToken) {
-	if s.len == 0 {
-		s.tokens[s.p] = token
-		s.p = s.index(s.p + 1)
-		s.len = utils.Min(s.len+1, len(s.tokens))
-	}
+	//if s.len == 0 {
+	s.tokens[s.p] = token
+	//s.p = s.index(s.p + 1)
+	//s.len = utils.Min(s.len+1, len(s.tokens))
+	//}
 }
 
 func (s *singleOriginTokenStore) Pop() *ClientToken {
-	s.p = s.index(s.p - 1)
+	// Right now, we don't want to actually pop the token, just retrieve it
+	//s.p = s.index(s.p - 1)
 	token := s.tokens[s.p]
-	s.tokens[s.p] = nil
-	s.len = utils.Max(s.len-1, 0)
+	//s.tokens[s.p] = nil
+	//s.len = utils.Max(s.len-1, 0)
 	return token
 }
 
@@ -123,8 +123,8 @@ func (s *lruTokenStore) Pop(key string) *ClientToken {
 		s.m[key].Value.hasBeenUsed = true
 		token = cache.Pop()
 		if cache.Len() == 0 {
-			s.q.Remove(el)
-			delete(s.m, key)
+			//s.q.Remove(el)
+			//delete(s.m, key)
 		}
 	}
 	return token
@@ -133,10 +133,12 @@ func (s *lruTokenStore) Pop(key string) *ClientToken {
 func (s *lruTokenStore) GetToken(key string) string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	for k, v := range s.m {
-		if k == key && len(v.Value.cache.tokens) > 0 {
-			return b64.StdEncoding.EncodeToString(v.Value.cache.tokens[0].data)
+	v := s.m[key]
+	if v != nil && v.Value != nil && v.Value.cache != nil && v.Value.cache.tokens != nil && len(v.Value.cache.tokens) > 0 {
+		if v.Value.cache.tokens[0] == nil {
+			print("asd")
 		}
+		return b64.StdEncoding.EncodeToString(v.Value.cache.tokens[0].data)
 	}
 	return ""
 }

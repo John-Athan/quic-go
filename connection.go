@@ -472,7 +472,7 @@ var newClientConnection = func(
 	}
 	if s.config.TokenStore != nil {
 		s.logger.Infof("Going to look in the store for the following domain: %s", s.tokenStoreKey)
-		s.logger.Infof(s.config.TokenStore.Describe())
+		//s.logger.Infof(s.config.TokenStore.Describe())
 		if token := s.config.TokenStore.Pop(s.tokenStoreKey); token != nil {
 			s.logger.Infof("Gonna use token %s for %s now.", b64.StdEncoding.EncodeToString(token.data), s.tokenStoreKey)
 			s.packer.SetToken(token.data)
@@ -1515,7 +1515,7 @@ func (s *connection) handleNewTokenFrame(frame *wire.NewTokenFrame) error {
 	if s.config.TokenStore != nil {
 		s.logger.Infof("Gonna store token %s now.", b64.StdEncoding.EncodeToString(frame.Token))
 		s.config.TokenStore.Put(s.tokenStoreKey, &ClientToken{data: frame.Token})
-		s.logger.Infof(s.config.TokenStore.Describe())
+		//s.logger.Infof(s.config.TokenStore.Describe())
 	}
 	return nil
 }
