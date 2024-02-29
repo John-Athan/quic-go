@@ -20,7 +20,9 @@ func newSingleOriginTokenStore(size int) *singleOriginTokenStore {
 
 func (s *singleOriginTokenStore) Add(token *ClientToken) {
 	//if s.len == 0 {
-	s.tokens[s.p] = token
+	if s.tokens[s.p] == nil {
+		s.tokens[s.p] = token
+	}
 	//s.p = s.index(s.p + 1)
 	//s.len = utils.Min(s.len+1, len(s.tokens))
 	//}
